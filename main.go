@@ -10,6 +10,26 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type GameRoom struct {
+	RoomID string
+	TextToType string
+	Players []Player
+	GameState string
+	GameDuration int
+}
+
+type Player struct {
+	PlayerID string
+	Name string
+	IsConnected bool
+	Result TypingResult
+}
+
+type TypingResult struct {
+	WPM int
+	Accuracy int
+}
+
 type HealthCheckMessage struct {
 	Message string
 }
