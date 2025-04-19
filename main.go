@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/julienschmidt/httprouter"
+	"github.com/google/uuid"
 )
 
 type GameRoom struct {
@@ -34,6 +36,18 @@ type HealthCheckMessage struct {
 	Message string
 }
 
+type CreateGameRequest struct {
+	GameDuration int `json:"game_duration"`
+}
+
+var GameRooms = struct {
+	lock sync.Mutex
+	rooms []GameRoom
+} {
+	lock: sync.Mutex{},
+	rooms: []GameRoom{},
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -57,6 +71,45 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	response = append(response, '\n')
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(response)
+}
+
+func CreateGame(w http.ResponseWriter, r *http.Request) {
+	
+	var req CreateGameRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	roomID := createID()
+
+	newRoom := GameRoom{
+		RoomID: roomID,
+		TextToType: "Sample text for typing",
+		Players: []Player{},
+		GameState: "waiting",
+		GameDuration: req.GameDuration,
+	}
+
+	GameRooms.lock.Lock()
+	GameRooms.rooms = append(GameRooms.rooms, newRoom)
+	GameRooms.lock.Unlock()
+
+	response, err := json.Marshal(newRoom)
+
+	if err != nil {
+		http.Error(w, "Unable to Convert Response into JSON", http.StatusInternalServerError)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response)
+}
+
+func createID() string {
+	return uuid.New().String()
 }
 
 func WebsocketTest(w http.ResponseWriter, r *http.Request) {
@@ -87,6 +140,7 @@ func main() {
 	router := httprouter.New()
 	router.HandlerFunc(http.MethodGet, "/health_check", HealthCheck)
 	router.HandlerFunc(http.MethodGet, "/ws", WebsocketTest)
+	router.HandlerFunc(http.MethodPost, "/create_game", CreateGame)
 
 	server := &http.Server{
 		Addr:    ":8080",
