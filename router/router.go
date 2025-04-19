@@ -32,6 +32,7 @@ func SetUpRouter() *httprouter.Router {
 	router.HandlerFunc(http.MethodGet, "/health_check", HealthCheck)
 	router.HandlerFunc(http.MethodGet, "/ws", WebsocketTest)
 	router.HandlerFunc(http.MethodPost, "/create_game", CreateGame)
+	router.HandlerFunc(http.MethodGet, "/join_game", JoinGame)
 
 	return router
 }
