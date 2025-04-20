@@ -23,7 +23,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		utils.BadRequestResponse(w, r, err)	
 		return
 	}
 
@@ -41,13 +41,10 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 	GameRooms.rooms = append(GameRooms.rooms, newRoom)
 	GameRooms.lock.Unlock()
 
-	response, err := json.Marshal(newRoom)
+	err = utils.WriteJSON(w, http.StatusAccepted, map[string]any{"room": newRoom}, nil)
 
 	if err != nil {
-		http.Error(w, "Unable to Convert Response into JSON", http.StatusInternalServerError)
+		utils.ServerErrorResponse(w, r)
 		return
 	}
-	
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(response)
 }
